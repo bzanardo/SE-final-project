@@ -4,8 +4,12 @@ import java.util.List;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
@@ -38,20 +42,24 @@ public class ScrumBoard extends Application {
 		Label firstLabel = new Label("Not Started: ");
 		Label secondLabel = new Label("In Progress: ");
 		Label thirdLabel = new Label("Testing/Review: ");
+		Label scrumLabel = new Label("Current Scrum");
+		
+		Button button = new Button("Add New User Story");
 
 		backlogView.setPrefSize(200, 200);
+		backlogView.setTranslateY(75);
 		
 		firstView.setPrefSize(200, 400);
 		firstView.setTranslateX(75);
-		firstView.setTranslateY(50);
+		firstView.setTranslateY(75);
 		
 		secondView.setPrefSize(200, 400);
 		secondView.setTranslateX(100);
-		secondView.setTranslateY(50);
+		secondView.setTranslateY(75);
 		
 		thirdView.setPrefSize(200, 400);
 		thirdView.setTranslateX(125);
-		thirdView.setTranslateY(50);
+		thirdView.setTranslateY(75);
 
 		backlogView.getItems().addAll(this.getUserStoryList());
 
@@ -61,13 +69,33 @@ public class ScrumBoard extends Application {
 		thirdView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
 		GridPane pane = new GridPane();
-		pane.setHgap(10);
-		pane.setVgap(10);
+		//pane.setHgap(10);
+		//pane.setVgap(10);
+		
+		pane.getChildren().add(button);
+		button.setTranslateX(25);
+		button.setTranslateY(520);
+		
 
 		pane.addRow(1, backlogLabel, firstLabel, secondLabel, thirdLabel);
-		pane.addRow(2, backlogView, firstView, secondView, thirdView);
+		pane.addRow(0, scrumLabel);
+		
+		backlogLabel.setTranslateX(70);
+		backlogLabel.setTranslateY(75);
+		firstLabel.setTranslateX(130);
+		firstLabel.setTranslateY(75);
+		secondLabel.setTranslateX(160);
+		secondLabel.setTranslateY(75);
+		thirdLabel.setTranslateX(170);
+		thirdLabel.setTranslateY(75);
+		
+		scrumLabel.setTranslateX(275);
+		scrumLabel.setTranslateY(30);
+		scrumLabel.setStyle("-fx-font: 20 arial;");
+		
+		pane.addRow(3, backlogView, firstView, secondView, thirdView);
 
-		// Add mouse event handlers for the source
+		// handlers
 		backlogView.setOnDragDetected(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
 				dragDetected(event, backlogView);
@@ -164,6 +192,34 @@ public class ScrumBoard extends Application {
 				dragDone(event, thirdView);
 			}
 		});
+		
+		EventHandler<ActionEvent> event = new EventHandler<ActionEvent>() { 
+            public void handle(ActionEvent e) 
+            { 
+            	 GridPane form = new GridPane();
+            	 form.setAlignment(Pos.CENTER);
+            	 form.setHgap(10);
+            	 form.setVgap(10);
+            	 form.setPadding(new Insets(25, 25, 25, 25));
+
+            
+                 Scene secondScene = new Scene(form, 500, 500);
+              
+                 // New window (Stage)
+                 Stage newWindow = new Stage();
+                 newWindow.setTitle("Add New User Story");
+                 newWindow.setScene(secondScene);
+  
+                 // Set position of second window, related to primary window.
+                 newWindow.setX(stage.getX() + 200);
+                 newWindow.setY(stage.getY() + 100);
+  
+                 newWindow.show();
+            } 
+        }; 
+        
+        button.setOnAction(event); 
+        
 
 		Pane root = new Pane();
 		root.setPrefSize(1000, 750);
@@ -188,15 +244,6 @@ public class ScrumBoard extends Application {
 		list.addAll(name1);
 
 		return list;
-	}
-
-	private ObservableList<String> getUserStoryNames(ArrayList<UserStory> list) {
-		ObservableList<String> names = FXCollections.<String>observableArrayList();
-		for (UserStory story : list) {
-			names.add(story.getName());
-		}
-
-		return names;
 	}
 
 	private void dragDetected(MouseEvent event, ListView<String> listView) {
