@@ -1,7 +1,15 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JOptionPane;
+
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -31,6 +39,10 @@ public class ScrumBoard extends Application {
 	ListView<String> thirdView = new ListView<>();
 
 	static final DataFormat STRING_LIST = new DataFormat("StringList");
+
+    BufferedReader in;
+    PrintWriter out;
+    Label msgFromServer = new Label("");
 
 	public static void main(String[] args) {
 		Application.launch(args);
@@ -92,6 +104,10 @@ public class ScrumBoard extends Application {
 		scrumLabel.setTranslateX(275);
 		scrumLabel.setTranslateY(30);
 		scrumLabel.setStyle("-fx-font: 20 arial;");
+		
+		msgFromServer.setTranslateX(100);
+		msgFromServer.setTranslateY(600);
+		pane.getChildren().add(msgFromServer);
 		
 		pane.addRow(3, backlogView, firstView, secondView, thirdView);
 
@@ -235,13 +251,55 @@ public class ScrumBoard extends Application {
 		stage.setScene(scene);
 		stage.setTitle("SCRUM Tool");
 		stage.show();
+		
+		Thread jfxThread = Thread.currentThread();
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				try {
+					runClient(jfxThread);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}).start();
 	}
+	
+	private void runClient(Thread t) throws IOException {
+		
+		Thread jfxThread = t;
+
+        // Make connection and initialize streams
+        String serverAddress = "localhost";
+        Socket socket = new Socket(serverAddress, 9001);
+        in = new BufferedReader(new InputStreamReader(
+            socket.getInputStream()));
+        out = new PrintWriter(socket.getOutputStream(), true);
+
+        // Process all messages from server, according to the protocol.
+        while (true) {
+            String line = in.readLine();
+            if(line != null){
+            	// Need to run this on JFX thread
+            	Platform.runLater(new Runnable() {
+					@Override
+					public void run() {
+						msgFromServer.setText("Message from server: "+line);
+					}
+				});
+	            
+            }
+        }
+    }
 
 	private ObservableList<String> getUserStoryList() {
 		ObservableList<String> list = FXCollections.<String>observableArrayList();
 		UserStory story1 = new UserStory("Create UI", "Bia", "Not Started");
-		String name1 = story1.getName();
-		list.addAll(name1);
+		UserStory story2 = new UserStory("Story 2", "Dan", "Not Started");
+		
+		list.add(story1.getName());
+		list.add(story2.getName());
 
 		return list;
 	}
@@ -314,6 +372,7 @@ public class ScrumBoard extends Application {
 
 		for (String story : listView.getSelectionModel().getSelectedItems()) {
 			selectedList.add(story);
+			out.println("Dragged story "+story);
 		}
 
 		listView.getSelectionModel().clearSelection();
