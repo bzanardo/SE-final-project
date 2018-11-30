@@ -54,7 +54,7 @@ public class ScrumBoard extends Application {
 		Label firstLabel = new Label("Not Started: ");
 		Label secondLabel = new Label("In Progress: ");
 		Label thirdLabel = new Label("Testing/Review: ");
-		Label scrumLabel = new Label("Current Scrum");
+		Label scrumLabel = new Label("Current Sprint");
 		
 		Button button = new Button("Add New User Story");
 
