@@ -39,7 +39,10 @@ public class ScrumBoard extends Application {
 	ListView<String> thirdView = new ListView<>();
 
 	static final DataFormat STRING_LIST = new DataFormat("StringList");
-
+	
+	static String DRAGFROM = "DRAG_FROM";
+	static String DRAGTO = "DRAG_TO";
+	
     BufferedReader in;
     PrintWriter out;
     Label msgFromServer = new Label("");
@@ -240,6 +243,7 @@ public class ScrumBoard extends Application {
 		Pane root = new Pane();
 		root.setPrefSize(1000, 750);
 		root.getChildren().addAll(pane);
+		
 		// Set the Style of the VBox
 		/*
 		 * root.setStyle("-fx-padding: 10;" + "-fx-border-style: solid inside;" +
@@ -251,6 +255,11 @@ public class ScrumBoard extends Application {
 		stage.setScene(scene);
 		stage.setTitle("SCRUM Tool");
 		stage.show();
+		
+		System.out.println("backlog="+backlogView.getId());
+		System.out.println("first="+firstView.getId());
+		System.out.println("second="+secondView.getId());
+		System.out.println("third="+thirdView.getId());
 		
 		Thread jfxThread = Thread.currentThread();
 		new Thread(new Runnable() {
@@ -281,6 +290,15 @@ public class ScrumBoard extends Application {
         while (true) {
             String line = in.readLine();
             if(line != null){
+            	String[] commands = line.split(",");
+            	if(commands[0].equals(DRAGFROM)){
+            		String storyName = commands[1];
+            		//removeStoryFromServer(storyName, listViewMap[commands[2]]);
+            	}
+            	else if(commands[0].equals(DRAGTO)){
+            		// add story to listview
+            	}
+            	
             	// Need to run this on JFX thread
             	Platform.runLater(new Runnable() {
 					@Override
@@ -345,6 +363,7 @@ public class ScrumBoard extends Application {
 
 			listView.getItems().addAll(list);
 			dragCompleted = true;
+			System.out.println("drag dropped on listview "+listView.getId());
 		}
 
 		event.setDropCompleted(dragCompleted);
@@ -372,11 +391,18 @@ public class ScrumBoard extends Application {
 
 		for (String story : listView.getSelectionModel().getSelectedItems()) {
 			selectedList.add(story);
-			out.println("Dragged story "+story);
+			String listViewName = "";
+			//for()
+			out.println(DRAGFROM+","+story+","+listViewName);
 		}
 
 		listView.getSelectionModel().clearSelection();
 		listView.getItems().removeAll(selectedList);
+	}
+	
+	private void removeStoryFromServer(String storyName, ListView<String> listView) {
+		listView.getSelectionModel().clearSelection();
+		listView.getItems().remove(storyName);
 	}
 
 }
