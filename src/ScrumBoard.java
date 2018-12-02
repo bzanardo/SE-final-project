@@ -6,9 +6,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map.Entry;
-
-import javax.swing.JOptionPane;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -23,6 +20,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TextField;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.DragEvent;
@@ -35,6 +33,8 @@ import javafx.stage.Stage;
 
 public class ScrumBoard extends Application {
 	
+	static Scene mainScene;
+	
 	HashMap<String, UserStory> stringMap = new HashMap<>();
 	HashMap<String, ListView<String>> listViewMap = new HashMap<>();
 
@@ -42,16 +42,15 @@ public class ScrumBoard extends Application {
 	ListView<String> firstView = new ListView<>();
 	ListView<String> secondView = new ListView<>();
 	ListView<String> thirdView = new ListView<>();
-
 	
 	static final DataFormat STRING_LIST = new DataFormat("StringList");
 	
-	static String DRAGFROM = "DRAG_FROM";
-	static String DRAGTO = "DRAG_TO";
+	static final String DRAGFROM = "DRAG_FROM";
+	static final String DRAGTO = "DRAG_TO";
+	static final String CREATE = "CREATE_STORY";
 	
     BufferedReader in;
     PrintWriter out;
-    Label msgFromServer = new Label("");
 
 	public static void main(String[] args) {
 		Application.launch(args);
@@ -113,10 +112,6 @@ public class ScrumBoard extends Application {
 		scrumLabel.setTranslateX(275);
 		scrumLabel.setTranslateY(30);
 		scrumLabel.setStyle("-fx-font: 20 arial;");
-		
-		msgFromServer.setTranslateX(100);
-		msgFromServer.setTranslateY(600);
-		pane.getChildren().add(msgFromServer);
 		
 		pane.addRow(3, backlogView, firstView, secondView, thirdView);
 		
@@ -225,15 +220,30 @@ public class ScrumBoard extends Application {
 			}
 		});
 		
-		EventHandler<ActionEvent> event = new EventHandler<ActionEvent>() { 
+		EventHandler<ActionEvent> createStoryEvent = new EventHandler<ActionEvent>() { 
             public void handle(ActionEvent e) 
             { 
             	 GridPane form = new GridPane();
-            	 form.setAlignment(Pos.CENTER);
+            	 form.setAlignment(Pos.TOP_LEFT);
             	 form.setHgap(10);
             	 form.setVgap(10);
             	 form.setPadding(new Insets(25, 25, 25, 25));
-
+            	 
+            	 Label storyNameLabel = new Label("Story Name:");
+            	 TextField tf1 = new TextField();
+            	 form.add(storyNameLabel, 0, 0);
+            	 form.add(tf1, 1, 0);
+            	 Label storyPtsLabel = new Label("Story Points:");
+            	 TextField tf2 = new TextField();
+            	 form.add(storyPtsLabel, 0, 1);
+            	 form.add(tf2, 1, 1);
+            	 Label author = new Label("Author:");
+            	 TextField tf3 = new TextField();
+            	 form.add(author, 0, 2);
+            	 form.add(tf3, 1, 2);
+            	 
+            	 Button createStory = new Button("Create New Story");
+            	 form.add(createStory, 0, 3);
             
                  Scene secondScene = new Scene(form, 500, 500);
               
@@ -247,11 +257,24 @@ public class ScrumBoard extends Application {
                  newWindow.setY(stage.getY() + 100);
   
                  newWindow.show();
+                 
+                 createStory.setOnAction(new EventHandler<ActionEvent>() {
+ 					@Override
+ 					public void handle(ActionEvent event) {
+ 						Platform.runLater(new Runnable() {
+ 							@Override
+ 							public void run() {
+ 								createNewStory(tf1.getText(), Integer.valueOf(tf2.getText()), tf3.getText());
+ 							}
+ 						});
+ 						out.println(CREATE+","+tf1.getText()+","+tf2.getText()+","+tf3.getText());
+ 						newWindow.close();
+ 					}
+ 				});
             } 
         }; 
         
-        button.setOnAction(event); 
-        
+        button.setOnAction(createStoryEvent); 
 
 		Pane root = new Pane();
 		root.setPrefSize(1000, 750);
@@ -264,19 +287,13 @@ public class ScrumBoard extends Application {
 		 * "-fx-border-color: blue;");
 		 */
 
-		Scene scene = new Scene(root);
-		stage.setScene(scene);
+		mainScene = new Scene(root);
+		stage.setScene(mainScene);
 		stage.setTitle("SCRUM Tool");
 		stage.show();
 		
-		System.out.println("backlog="+backlogView.getId());
-		System.out.println("first="+firstView.getId());
-		System.out.println("second="+secondView.getId());
-		System.out.println("third="+thirdView.getId());
-		
 		Thread jfxThread = Thread.currentThread();
 		new Thread(new Runnable() {
-			
 			@Override
 			public void run() {
 				try {
@@ -291,8 +308,8 @@ public class ScrumBoard extends Application {
 	private HashMap<String, UserStory> initializeMap() {
 		HashMap<String, UserStory> map = new HashMap<>();
 		
-		UserStory story1 = new UserStory("Create UI", "Bia", "Not Started");
-		UserStory story2 = new UserStory("Story 2", "Dan", "Not Started");
+		UserStory story1 = new UserStory("Create UI", 1, "Bia", "Not Started");
+		UserStory story2 = new UserStory("Story 2", 1, "Dan", "Not Started");
 		
 		map.put(story1.getName(), story1);
 		map.put(story2.getName(), story2);
@@ -302,37 +319,61 @@ public class ScrumBoard extends Application {
 	}
 
 	private void runClient(Thread t) throws IOException {
-		
-		Thread jfxThread = t;
-
         // Make connection and initialize streams
+		boolean connectionMade = false;
         String serverAddress = "localhost";
-        Socket socket = new Socket(serverAddress, 9001);
-        in = new BufferedReader(new InputStreamReader(
-            socket.getInputStream()));
-        out = new PrintWriter(socket.getOutputStream(), true);
+        try{
+        	Socket socket = new Socket(serverAddress, 9001);
+        	in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            out = new PrintWriter(socket.getOutputStream(), true);
+            connectionMade = true;
+        } catch(Exception e){
+        	e.printStackTrace();
+        	System.out.println("Failed to connect to server, exiting");
+        	Platform.runLater(new Runnable() {
+				@Override
+				public void run() {
+					((Stage)mainScene.getWindow()).close();
+				}
+			});
+        }
 
         // Process all messages from server, according to the protocol.
         while (true) {
+        	if(!connectionMade){
+        		continue;
+        	}
+        		
             String line = in.readLine();
             if(line != null){
             	String[] commands = line.split(",");
             	if(commands[0].equals(DRAGFROM)){
             		String storyName = commands[1];
-            		//removeStoryFromServer(storyName, listViewMap[commands[2]]);
+            		Platform.runLater(new Runnable() {	// run on JavaFX main thread
+    					@Override
+    					public void run() {
+    						removeStoryFromServer(storyName, listViewMap.get(commands[2]));
+    					}
+    				});
             	}
             	else if(commands[0].equals(DRAGTO)){
-            		// add story to listview
+            		String storyName = commands[1];
+            		Platform.runLater(new Runnable() {	// run on JavaFX main thread
+    					@Override
+    					public void run() {
+    						addStoryFromServer(storyName, listViewMap.get(commands[2]));
+    					}
+    				});
             	}
-            	
-            	// Need to run this on JFX thread
-            	Platform.runLater(new Runnable() {
-					@Override
-					public void run() {
-						msgFromServer.setText("Message from server: "+line);
-					}
-				});
-	            
+            	else if(commands[0].equals(CREATE)){
+            		String storyName = commands[1];
+            		Platform.runLater(new Runnable() {	// run on JavaFX main thread
+    					@Override
+    					public void run() {
+    						createNewStory(storyName, Integer.valueOf(commands[2]), commands[3]);
+    					}
+    				});
+            	}
             }
         }
     }
@@ -394,7 +435,8 @@ public class ScrumBoard extends Application {
 
 			listView.getItems().addAll(list);
 			dragCompleted = true;
-			System.out.println("drag dropped on listview "+listView.getId());
+			
+			out.println(DRAGTO+","+list.get(0)+","+getListViewName(listView));
 		}
 		
 		event.setDropCompleted(dragCompleted);
@@ -416,14 +458,22 @@ public class ScrumBoard extends Application {
 
 		return list;
 	}
+	
+	private String getListViewName(ListView<String> obj){
+		for(String s : listViewMap.keySet()){
+			if(listViewMap.get(s).equals(obj)){
+				return s;
+			}
+		}
+		return null;
+	}
 
 	private void removeSelectedStories(ListView<String> listView) {
 		List<String> selectedList = new ArrayList<>();
 
 		for (String story : listView.getSelectionModel().getSelectedItems()) {
 			selectedList.add(story);
-			String listViewName = "";
-			//for()
+			String listViewName = getListViewName(listView);
 			out.println(DRAGFROM+","+story+","+listViewName);
 		}
 
@@ -431,9 +481,19 @@ public class ScrumBoard extends Application {
 		listView.getItems().removeAll(selectedList);
 	}
 	
+	private void createNewStory(String storyName, int storyPoints, String author){
+		UserStory newStory = new UserStory(storyName, storyPoints, author, "Not Started");
+		stringMap.put(storyName, newStory);
+		backlogView.getItems().add(storyName);
+	}
+	
 	private void removeStoryFromServer(String storyName, ListView<String> listView) {
 		listView.getSelectionModel().clearSelection();
 		listView.getItems().remove(storyName);
+	}
+	
+	private void addStoryFromServer(String storyName, ListView<String> listView){
+		listView.getItems().add(storyName);
 	}
 
 }
