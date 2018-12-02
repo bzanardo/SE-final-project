@@ -4,7 +4,9 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 
 import javax.swing.JOptionPane;
 
@@ -32,12 +34,16 @@ import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
 public class ScrumBoard extends Application {
+	
+	HashMap<String, UserStory> stringMap = new HashMap<>();
+	HashMap<String, ListView<String>> listViewMap = new HashMap<>();
 
 	ListView<String> backlogView = new ListView<>();
 	ListView<String> firstView = new ListView<>();
 	ListView<String> secondView = new ListView<>();
 	ListView<String> thirdView = new ListView<>();
 
+	
 	static final DataFormat STRING_LIST = new DataFormat("StringList");
 
     BufferedReader in;
@@ -50,6 +56,8 @@ public class ScrumBoard extends Application {
 
 	@Override
 	public void start(Stage stage) throws Exception {
+		stringMap = initializeMap();
+		
 		Label backlogLabel = new Label("BackLog: ");
 		Label firstLabel = new Label("Not Started: ");
 		Label secondLabel = new Label("In Progress: ");
@@ -81,9 +89,7 @@ public class ScrumBoard extends Application {
 		thirdView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
 		GridPane pane = new GridPane();
-		//pane.setHgap(10);
-		//pane.setVgap(10);
-		
+
 		pane.getChildren().add(button);
 		button.setTranslateX(25);
 		button.setTranslateY(520);
@@ -110,6 +116,12 @@ public class ScrumBoard extends Application {
 		pane.getChildren().add(msgFromServer);
 		
 		pane.addRow(3, backlogView, firstView, secondView, thirdView);
+		
+		listViewMap.put("backlogView", backlogView);
+		listViewMap.put("firstView", firstView);
+		listViewMap.put("secondView", secondView);
+		listViewMap.put("thirdView", thirdView);
+		
 
 		// handlers
 		backlogView.setOnDragDetected(new EventHandler<MouseEvent>() {
@@ -182,6 +194,7 @@ public class ScrumBoard extends Application {
 		secondView.setOnDragDone(new EventHandler<DragEvent>() {
 			public void handle(DragEvent event) {
 				dragDone(event, secondView);
+				
 			}
 		});
 		
@@ -266,6 +279,19 @@ public class ScrumBoard extends Application {
 		}).start();
 	}
 	
+	private HashMap<String, UserStory> initializeMap() {
+		HashMap<String, UserStory> map = new HashMap<>();
+		
+		UserStory story1 = new UserStory("Create UI", "Bia", "Not Started");
+		UserStory story2 = new UserStory("Story 2", "Dan", "Not Started");
+		
+		map.put(story1.getName(), story1);
+		map.put(story2.getName(), story2);
+		
+		return map;
+		
+	}
+
 	private void runClient(Thread t) throws IOException {
 		
 		Thread jfxThread = t;
@@ -295,11 +321,16 @@ public class ScrumBoard extends Application {
 
 	private ObservableList<String> getUserStoryList() {
 		ObservableList<String> list = FXCollections.<String>observableArrayList();
-		UserStory story1 = new UserStory("Create UI", "Bia", "Not Started");
-		UserStory story2 = new UserStory("Story 2", "Dan", "Not Started");
+		//UserStory story1 = new UserStory("Create UI", "Bia", "Not Started");
+		//UserStory story2 = new UserStory("Story 2", "Dan", "Not Started");
 		
-		list.add(story1.getName());
-		list.add(story2.getName());
+		for (String storyName : stringMap.keySet()) {
+			list.add(storyName);
+			
+		}
+		
+		//list.add(story1.getName());
+		//list.add(story2.getName());
 
 		return list;
 	}
@@ -346,7 +377,7 @@ public class ScrumBoard extends Application {
 			listView.getItems().addAll(list);
 			dragCompleted = true;
 		}
-
+		
 		event.setDropCompleted(dragCompleted);
 		event.consume();
 	}
