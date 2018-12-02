@@ -5,26 +5,18 @@ public class UserStory  implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	private String name;
+	private int points;
 	private String author;
 	private String status;
-	private ArrayList<String> storyPoints = new ArrayList<String>(); 
 	
-	public  UserStory(String n, String a, String s) {
+	public  UserStory(String n, int points, String a, String s) {
 		this.name = n;
 		this.author = a;
 		//this.status = s;
 	}
-	
-	public ArrayList<String> getStoryPoints() {
-		return this.storyPoints;
-	}
-	
-	public void addStoryPoint(String s) {
-		// TO DO
-	}
-	
-	public void removeStoryPoint(int index) {
-		// TO DO
+			
+	public int getStoryPoints() {
+		return this.points;
 	}
 	
 	public String getAuthor() {
