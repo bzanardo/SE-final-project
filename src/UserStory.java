@@ -11,7 +11,7 @@ public class UserStory  implements Serializable {
 	
 	public  UserStory(String n, String a, String s) {
 		this.name = n;
-		//this.author = a;
+		this.author = a;
 		//this.status = s;
 	}
 	

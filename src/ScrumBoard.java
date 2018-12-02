@@ -23,6 +23,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TextArea;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.DragEvent;
@@ -42,6 +43,8 @@ public class ScrumBoard extends Application {
 	ListView<String> firstView = new ListView<>();
 	ListView<String> secondView = new ListView<>();
 	ListView<String> thirdView = new ListView<>();
+	
+	TextArea textBox = new TextArea();
 
 	
 	static final DataFormat STRING_LIST = new DataFormat("StringList");
@@ -58,6 +61,7 @@ public class ScrumBoard extends Application {
 	public void start(Stage stage) throws Exception {
 		stringMap = initializeMap();
 		
+		
 		Label backlogLabel = new Label("BackLog: ");
 		Label firstLabel = new Label("Not Started: ");
 		Label secondLabel = new Label("In Progress: ");
@@ -65,21 +69,31 @@ public class ScrumBoard extends Application {
 		Label scrumLabel = new Label("Current Sprint");
 		
 		Button button = new Button("Add New User Story");
+		
+		textBox.setPrefHeight(300);
+		textBox.setPrefWidth(400);
+		//textBox.setTranslateX(400);
+		textBox.setTranslateY(150);
+		textBox.setEditable(false);
 
 		backlogView.setPrefSize(200, 200);
 		backlogView.setTranslateY(75);
+		backlogView.setMaxWidth(200);
 		
 		firstView.setPrefSize(200, 400);
 		firstView.setTranslateX(75);
 		firstView.setTranslateY(75);
+		firstView.setMaxWidth(200);
 		
 		secondView.setPrefSize(200, 400);
 		secondView.setTranslateX(100);
 		secondView.setTranslateY(75);
+		secondView.setMaxWidth(200);
 		
 		thirdView.setPrefSize(200, 400);
-		thirdView.setTranslateX(125);
+		thirdView.setTranslateX(-75);
 		thirdView.setTranslateY(75);
+		thirdView.setMaxWidth(200);
 
 		backlogView.getItems().addAll(this.getUserStoryList());
 
@@ -104,7 +118,7 @@ public class ScrumBoard extends Application {
 		firstLabel.setTranslateY(75);
 		secondLabel.setTranslateX(160);
 		secondLabel.setTranslateY(75);
-		thirdLabel.setTranslateX(170);
+		//thirdLabel.setTranslateX(170);
 		thirdLabel.setTranslateY(75);
 		
 		scrumLabel.setTranslateX(275);
@@ -116,6 +130,8 @@ public class ScrumBoard extends Application {
 		pane.getChildren().add(msgFromServer);
 		
 		pane.addRow(3, backlogView, firstView, secondView, thirdView);
+		//pane.addRow(5, textBox);
+		pane.add(textBox, 2, 4);
 		
 		listViewMap.put("backlogView", backlogView);
 		listViewMap.put("firstView", firstView);
@@ -219,6 +235,38 @@ public class ScrumBoard extends Application {
 		thirdView.setOnDragDone(new EventHandler<DragEvent>() {
 			public void handle(DragEvent event) {
 				dragDone(event, thirdView);
+			}
+		});
+		
+		backlogView.setOnMouseClicked(new EventHandler<MouseEvent>() {
+			public void handle(MouseEvent event) {
+				expandStory(backlogView);
+				
+				
+			}
+		});
+		
+		firstView.setOnMouseClicked(new EventHandler<MouseEvent>() {
+			public void handle(MouseEvent event) {
+				expandStory(firstView);
+				
+				
+			}
+		});
+		
+		secondView.setOnMouseClicked(new EventHandler<MouseEvent>() {
+			public void handle(MouseEvent event) {
+				expandStory(secondView);
+				
+				
+			}
+		});
+		
+		thirdView.setOnMouseClicked(new EventHandler<MouseEvent>() {
+			public void handle(MouseEvent event) {
+				expandStory(thirdView);
+				
+				
 			}
 		});
 		
@@ -333,6 +381,14 @@ public class ScrumBoard extends Application {
 		//list.add(story2.getName());
 
 		return list;
+	}
+	
+	private void expandStory(ListView<String> view) {
+		String name = view.getSelectionModel().getSelectedItem();
+		UserStory story = stringMap.get(name);
+		textBox.clear();
+		textBox.appendText("Name: " + name + "\n" + "Author: " + story.getAuthor());		
+			
 	}
 
 	private void dragDetected(MouseEvent event, ListView<String> listView) {
