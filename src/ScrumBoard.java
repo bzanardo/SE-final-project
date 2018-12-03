@@ -125,6 +125,7 @@ public class ScrumBoard extends Application {
 		addButton.setTranslateX(25);
 		addButton.setTranslateY(520);
 		editButton.setTranslateY(10);
+		editButton.setDisable(true);
 
 		backlogView.getItems().addAll(this.getUserStoryList());
 
@@ -149,7 +150,7 @@ public class ScrumBoard extends Application {
 		listViewMap.put("firstView", firstView);
 		listViewMap.put("secondView", secondView);
 		listViewMap.put("thirdView", thirdView);
-		
+			
 
 		// handlers
 		backlogView.setOnDragDetected(new EventHandler<MouseEvent>() {
@@ -252,6 +253,7 @@ public class ScrumBoard extends Application {
 		
 		backlogView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
+				editButton.setDisable(false);
 				expandStory(backlogView);
 				
 				
@@ -260,6 +262,7 @@ public class ScrumBoard extends Application {
 		
 		firstView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
+				editButton.setDisable(false);
 				expandStory(firstView);
 				
 				
@@ -276,6 +279,7 @@ public class ScrumBoard extends Application {
 		
 		thirdView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
+				editButton.setDisable(false);
 				expandStory(thirdView);
 				
 				
@@ -397,7 +401,7 @@ public class ScrumBoard extends Application {
             } 
         }; 
         
-        addButton.setOnAction(createStoryEvent); 
+        addButton.setOnAction(createStoryEvent);
         editButton.setOnAction(editStoryEvent);
 
 		Pane root = new Pane();
