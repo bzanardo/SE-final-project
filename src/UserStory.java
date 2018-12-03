@@ -43,5 +43,6 @@ public class UserStory  implements Serializable {
 	public void setAuthor(String author) {
 		this.author = author;
 	}
+	
 
 }

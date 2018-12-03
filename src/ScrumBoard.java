@@ -38,6 +38,7 @@ public class ScrumBoard extends Application {
 	
 	HashMap<String, UserStory> stringMap = new HashMap<>();
 	HashMap<String, ListView<String>> listViewMap = new HashMap<>();
+	HashMap<ListView<String>, String> statusMap = new HashMap<>();
 
 	ListView<String> backlogView = new ListView<>();
 	ListView<String> firstView = new ListView<>();
@@ -46,6 +47,7 @@ public class ScrumBoard extends Application {
 	
 	TextArea textBox = new TextArea();
 	Label textBoxLabel = new Label("");
+	Button editButton = new Button("Edit Story");
 	
 	UserStory selectedStory = new UserStory(null, 0, null, null);		// story selected by user to be edited
 	
@@ -67,6 +69,19 @@ public class ScrumBoard extends Application {
 	public void start(Stage stage) throws Exception {
 		stringMap = initializeMap();
 		
+		// initialize listview map
+		listViewMap.put("backlogView", backlogView);
+		listViewMap.put("firstView", firstView);
+		listViewMap.put("secondView", secondView);
+		listViewMap.put("thirdView", thirdView);
+		
+		// initialize status map
+		statusMap.put(backlogView, "Backlog");
+		statusMap.put(firstView, "Not Started");
+		statusMap.put(secondView, "In Progress");
+		statusMap.put(thirdView, "Testing/Review");
+		
+		
 		// Labels
 		Label backlogLabel = new Label("BackLog: ");
 		Label firstLabel = new Label("Not Started: ");
@@ -76,7 +91,6 @@ public class ScrumBoard extends Application {
 		
 		// Buttons
 		Button addButton = new Button("Add New User Story");
-		Button editButton = new Button("Edit Story");
 		
 		// Set labels' positions
 		backlogLabel.setTranslateX(70);
@@ -146,10 +160,6 @@ public class ScrumBoard extends Application {
 		pane.addRow(3, backlogView, firstView, secondView, thirdView);
 		pane.add(textBox, 2, 4);
 		
-		listViewMap.put("backlogView", backlogView);
-		listViewMap.put("firstView", firstView);
-		listViewMap.put("secondView", secondView);
-		listViewMap.put("thirdView", thirdView);
 			
 
 		// handlers
@@ -253,7 +263,6 @@ public class ScrumBoard extends Application {
 		
 		backlogView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
-				editButton.setDisable(false);
 				expandStory(backlogView);
 				
 				
@@ -262,7 +271,6 @@ public class ScrumBoard extends Application {
 		
 		firstView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
-				editButton.setDisable(false);
 				expandStory(firstView);
 				
 				
@@ -279,7 +287,6 @@ public class ScrumBoard extends Application {
 		
 		thirdView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
-				editButton.setDisable(false);
 				expandStory(thirdView);
 				
 				
@@ -396,6 +403,8 @@ public class ScrumBoard extends Application {
  						});
  						out.println(EDIT+","+tf1.getText()+","+tf2.getText()+","+tf3.getText());
  						newWindow.close();
+ 						//updateStory(selectedStory.getName());
+ 						textBox.clear();
  					}
  				});
             } 
@@ -522,14 +531,33 @@ public class ScrumBoard extends Application {
 	
 	private void expandStory(ListView<String> view) {
 		String name = view.getSelectionModel().getSelectedItem();
-		UserStory story = stringMap.get(name);
-		selectedStory = story;
-		textBoxLabel.setText(name);
 		textBox.clear();
-		textBox.appendText(" Author: " + story.getAuthor() + 
+		
+		if (name == null) {
+			textBoxLabel.setText("");
+			editButton.setDisable(true);
+		}
+		
+		else {
+			editButton.setDisable(false);
+			UserStory story = stringMap.get(name);
+			selectedStory = story;
+			textBoxLabel.setText(name);
+			textBox.appendText(" Author: " + story.getAuthor() + 
 							"\n Story Points: " + story.getStoryPoints() + "\n Status: " 
-							+ story.getStatus());		
+							+ story.getStatus());
+		}
 			
+	}
+	
+	private void updateStory(String name) {
+		UserStory story = stringMap.get(name);
+		textBox.clear();
+		textBoxLabel.setText(story.getName());
+		textBox.appendText(" Author: " + story.getAuthor() + 
+						"\n Story Points: " + story.getStoryPoints() + "\n Status: " 
+						+ story.getStatus());
+		
 	}
 
 	private void dragDetected(MouseEvent event, ListView<String> listView) {
@@ -570,7 +598,9 @@ public class ScrumBoard extends Application {
 
 		if (dragboard.hasContent(STRING_LIST)) {
 			ArrayList<String> list = (ArrayList<String>) dragboard.getContent(STRING_LIST);
-
+			UserStory story = stringMap.get(list.get(0));
+			story.setStatus(statusMap.get(listView)); 
+					
 			listView.getItems().addAll(list);
 			dragCompleted = true;
 			
