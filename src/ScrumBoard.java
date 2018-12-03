@@ -45,12 +45,16 @@ public class ScrumBoard extends Application {
 	ListView<String> thirdView = new ListView<>();
 	
 	TextArea textBox = new TextArea();
+	Label textBoxLabel = new Label("");
+	
+	UserStory selectedStory = new UserStory(null, 0, null, null);		// story selected by user to be edited
 	
 	static final DataFormat STRING_LIST = new DataFormat("StringList");
 	
 	static final String DRAGFROM = "DRAG_FROM";
 	static final String DRAGTO = "DRAG_TO";
 	static final String CREATE = "CREATE_STORY";
+	static final String EDIT = "EDIT_STORY";
 	
     BufferedReader in;
     PrintWriter out;
@@ -63,22 +67,41 @@ public class ScrumBoard extends Application {
 	public void start(Stage stage) throws Exception {
 		stringMap = initializeMap();
 		
-		
+		// Labels
 		Label backlogLabel = new Label("BackLog: ");
 		Label firstLabel = new Label("Not Started: ");
 		Label secondLabel = new Label("In Progress: ");
 		Label thirdLabel = new Label("Testing/Review: ");
 		Label scrumLabel = new Label("Current Sprint");
 		
+		// Buttons
 		Button addButton = new Button("Add New User Story");
 		Button editButton = new Button("Edit Story");
 		
+		// Set labels' positions
+		backlogLabel.setTranslateX(70);
+		backlogLabel.setTranslateY(75);
+		firstLabel.setTranslateX(130);
+		firstLabel.setTranslateY(75);
+		secondLabel.setTranslateX(160);
+		secondLabel.setTranslateY(75);
+		thirdLabel.setTranslateX(-20);
+		thirdLabel.setTranslateY(75);	
+		scrumLabel.setTranslateX(275);
+		scrumLabel.setTranslateY(30);
+		scrumLabel.setStyle("-fx-font: 20 arial;");
+		
+		//set textbox position
 		textBox.setPrefHeight(300);
 		textBox.setPrefWidth(400);
-		//textBox.setTranslateX(400);
 		textBox.setTranslateY(150);
 		textBox.setEditable(false);
-
+		
+		textBoxLabel.setTranslateY(-20);
+		textBoxLabel.setTranslateX(150);
+		textBoxLabel.setStyle("-fx-font: 16 arial;");
+		
+		//Set listviews' postions
 		backlogView.setPrefSize(200, 200);
 		backlogView.setTranslateY(75);
 		backlogView.setMaxWidth(200);
@@ -97,6 +120,11 @@ public class ScrumBoard extends Application {
 		thirdView.setTranslateX(-75);
 		thirdView.setTranslateY(75);
 		thirdView.setMaxWidth(200);
+		
+		// Set buttons' positions
+		addButton.setTranslateX(25);
+		addButton.setTranslateY(520);
+		editButton.setTranslateY(10);
 
 		backlogView.getItems().addAll(this.getUserStoryList());
 
@@ -108,28 +136,13 @@ public class ScrumBoard extends Application {
 		GridPane pane = new GridPane();
 
 		pane.getChildren().add(addButton);
-		addButton.setTranslateX(25);
-		addButton.setTranslateY(520);
+		pane.add(editButton, 3, 4);
 		
-
 		pane.addRow(1, backlogLabel, firstLabel, secondLabel, thirdLabel);
 		pane.addRow(0, scrumLabel);
-		
-		backlogLabel.setTranslateX(70);
-		backlogLabel.setTranslateY(75);
-		firstLabel.setTranslateX(130);
-		firstLabel.setTranslateY(75);
-		secondLabel.setTranslateX(160);
-		secondLabel.setTranslateY(75);
-		//thirdLabel.setTranslateX(170);
-		thirdLabel.setTranslateY(75);
-		
-		scrumLabel.setTranslateX(275);
-		scrumLabel.setTranslateY(30);
-		scrumLabel.setStyle("-fx-font: 20 arial;");
+		pane.add(textBoxLabel, 2, 4);
 		
 		pane.addRow(3, backlogView, firstView, secondView, thirdView);
-		//pane.addRow(5, textBox);
 		pane.add(textBox, 2, 4);
 		
 		listViewMap.put("backlogView", backlogView);
@@ -323,19 +336,74 @@ public class ScrumBoard extends Application {
             } 
         }; 
         
+        EventHandler<ActionEvent> editStoryEvent = new EventHandler<ActionEvent>() { 
+            public void handle(ActionEvent e) 
+            { 
+            	 GridPane form = new GridPane();
+            	 form.setAlignment(Pos.TOP_LEFT);
+            	 form.setHgap(10);
+            	 form.setVgap(10);
+            	 form.setPadding(new Insets(25, 25, 25, 25));
+            	 
+            	 Label storyNameLabel = new Label("Story Name:");
+            	 TextField tf1 = new TextField();
+            	 tf1.setEditable(false);
+            	 tf1.setText(selectedStory.getName());	 
+            	 form.add(storyNameLabel, 0, 0);
+            	 form.add(tf1, 1, 0);
+            	 
+            	 Label storyPtsLabel = new Label("Story Points:");
+            	 TextField tf2 = new TextField();
+            	 tf2.setText(Integer.toString(selectedStory.getStoryPoints()));
+            	 form.add(storyPtsLabel, 0, 1);
+            	 form.add(tf2, 1, 1);
+            	 
+            	 Label author = new Label("Author:");
+            	 TextField tf3 = new TextField();
+            	 tf3.setText(selectedStory.getAuthor());
+            	 form.add(author, 0, 2);
+            	 form.add(tf3, 1, 2);
+            	 
+            	 Button saveStory = new Button("Save");
+            	 form.add(saveStory, 0, 3);
+            
+                 Scene secondScene = new Scene(form, 500, 500);
+              
+                 // New window (Stage)
+                 Stage newWindow = new Stage();
+                 newWindow.setTitle("Edit User Story");
+                 newWindow.setScene(secondScene);
+  
+                 // Set position of second window, related to primary window.
+                 newWindow.setX(stage.getX() + 200);
+                 newWindow.setY(stage.getY() + 100);
+  
+                 newWindow.show();
+                 
+                 saveStory.setOnAction(new EventHandler<ActionEvent>() {
+ 					@Override
+ 					public void handle(ActionEvent event) {
+ 						Platform.runLater(new Runnable() {
+ 							@Override
+ 							public void run() {
+ 								editStory(selectedStory.getName(), Integer.valueOf(tf2.getText()), tf3.getText());
+ 							}
+
+ 						});
+ 						out.println(EDIT+","+tf1.getText()+","+tf2.getText()+","+tf3.getText());
+ 						newWindow.close();
+ 					}
+ 				});
+            } 
+        }; 
+        
         addButton.setOnAction(createStoryEvent); 
+        editButton.setOnAction(editStoryEvent);
 
 		Pane root = new Pane();
 		root.setPrefSize(1000, 750);
 		root.getChildren().addAll(pane);
 		
-		// Set the Style of the VBox
-		/*
-		 * root.setStyle("-fx-padding: 10;" + "-fx-border-style: solid inside;" +
-		 * "-fx-border-width: 2;" + "-fx-border-insets: 5;" + "-fx-border-radius: 5;" +
-		 * "-fx-border-color: blue;");
-		 */
-
 		mainScene = new Scene(root);
 		stage.setScene(mainScene);
 		stage.setTitle("SCRUM Tool");
@@ -423,13 +491,23 @@ public class ScrumBoard extends Application {
     					}
     				});
             	}
+            	else if(commands[0].equals(EDIT)){
+            		String storyName = commands[1];
+            		Platform.runLater(new Runnable() {	// run on JavaFX main thread
+    					@Override
+    					public void run() {
+    						editStory(storyName, Integer.valueOf(commands[2]), commands[3]);
+    					}
+    				});
+            	}
             }
         }
     }
 
 	private ObservableList<String> getUserStoryList() {
+		
 		ObservableList<String> list = FXCollections.<String>observableArrayList();
-
+		
 		for (String storyName : stringMap.keySet()) {
 			list.add(storyName);
 			
@@ -441,8 +519,12 @@ public class ScrumBoard extends Application {
 	private void expandStory(ListView<String> view) {
 		String name = view.getSelectionModel().getSelectedItem();
 		UserStory story = stringMap.get(name);
+		selectedStory = story;
+		textBoxLabel.setText(name);
 		textBox.clear();
-		textBox.appendText("Name: " + name + "\n" + "Author: " + story.getAuthor());		
+		textBox.appendText(" Author: " + story.getAuthor() + 
+							"\n Story Points: " + story.getStoryPoints() + "\n Status: " 
+							+ story.getStatus());		
 			
 	}
 
@@ -546,6 +628,13 @@ public class ScrumBoard extends Application {
 	
 	private void addStoryFromServer(String storyName, ListView<String> listView){
 		listView.getItems().add(storyName);
+	}
+	
+	private void editStory(String storyName, Integer storyPoints, String author) {
+		UserStory story = stringMap.get(storyName);
+		story.setStoryPoints(storyPoints);
+		story.setAuthor(author);
+		
 	}
 
 }

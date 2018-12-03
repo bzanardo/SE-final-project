@@ -12,7 +12,8 @@ public class UserStory  implements Serializable {
 	public  UserStory(String n, int points, String a, String s) {
 		this.name = n;
 		this.author = a;
-		//this.status = s;
+		this.status = "Backlog";
+		this.points = points;
 	}
 			
 	public int getStoryPoints() {
@@ -33,6 +34,14 @@ public class UserStory  implements Serializable {
 	
 	public String getName() {
 		return this.name;
+	}
+	
+	public void setStoryPoints(int points) {
+		this.points = points;
+	}
+	
+	public void setAuthor(String author) {
+		this.author = author;
 	}
 
 }
