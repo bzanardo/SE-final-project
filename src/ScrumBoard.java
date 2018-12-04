@@ -1,6 +1,11 @@
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -36,8 +41,8 @@ public class ScrumBoard extends Application {
 	
 	static Scene mainScene;
 	
-	HashMap<String, UserStory> stringMap = new HashMap<>();
-	HashMap<String, ListView<String>> listViewMap = new HashMap<>();
+	static HashMap<String, UserStory> stringMap = new HashMap<>();
+	static HashMap<String, ListView<String>> listViewMap = new HashMap<>();
 	HashMap<ListView<String>, String> statusMap = new HashMap<>();
 
 	ListView<String> backlogView = new ListView<>();
@@ -74,6 +79,7 @@ public class ScrumBoard extends Application {
 		listViewMap.put("firstView", firstView);
 		listViewMap.put("secondView", secondView);
 		listViewMap.put("thirdView", thirdView);
+		loadListViewMap();
 		
 		// initialize status map
 		statusMap.put(backlogView, "Backlog");
@@ -159,8 +165,6 @@ public class ScrumBoard extends Application {
 		
 		pane.addRow(3, backlogView, firstView, secondView, thirdView);
 		pane.add(textBox, 2, 4);
-		
-			
 
 		// handlers
 		backlogView.setOnDragDetected(new EventHandler<MouseEvent>() {
@@ -287,9 +291,7 @@ public class ScrumBoard extends Application {
 		
 		thirdView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
-				expandStory(thirdView);
-				
-				
+				expandStory(thirdView);		
 			}
 		});
 		
@@ -435,17 +437,50 @@ public class ScrumBoard extends Application {
 		}).start();
 	}
 	
+	@SuppressWarnings("unchecked")
 	private HashMap<String, UserStory> initializeMap() {
-		HashMap<String, UserStory> map = new HashMap<>();
+		HashMap<String, UserStory> map = new HashMap<String, UserStory>();
+		try {
+	         FileInputStream fis = new FileInputStream("Stories.ser");
+	         ObjectInputStream ois = new ObjectInputStream(fis);
+	         map = (HashMap<String, UserStory>) ois.readObject();
+	         ois.close();
+	         fis.close();
+		}catch(Exception e){
+	       e.printStackTrace();
+	    }
+		
+		/*HashMap<String, UserStory> map = new HashMap<>();
 		
 		UserStory story1 = new UserStory("Create UI", 1, "Bia", "Not Started");
 		UserStory story2 = new UserStory("Story 2", 1, "Dan", "Not Started");
 		
 		map.put(story1.getName(), story1);
-		map.put(story2.getName(), story2);
+		map.put(story2.getName(), story2);*/
 		
 		return map;
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void loadListViewMap(){
+		HashMap<String, ListView<String>> map = new HashMap<String, ListView<String>>();
+		try{
+			FileInputStream fis = new FileInputStream("ListViews.ser");
+	        ObjectInputStream ois = new ObjectInputStream(fis);
+	        HashMap<String, String[]> obj = (HashMap<String, String[]>)ois.readObject();
+	        for(String listViewName : obj.keySet()){
+	        	listViewMap.get(listViewName).getItems().clear();
+	        	for(String storyName : obj.get(listViewName)){
+	        		listViewMap.get(listViewName).getItems().add(storyName);
+	        	}
+	        }
+	        ois.close();
+	        fis.close();
+		}catch(Exception e){
+	         e.printStackTrace();
+	    }
 		
+		//return map;
 	}
 
 	private void runClient(Thread t) throws IOException {
@@ -458,8 +493,8 @@ public class ScrumBoard extends Application {
             out = new PrintWriter(socket.getOutputStream(), true);
             connectionMade = true;
         } catch(Exception e){
-        	e.printStackTrace();
         	System.out.println("Failed to connect to server, exiting");
+        	e.printStackTrace();
         	Platform.runLater(new Runnable() {
 				@Override
 				public void run() {
@@ -650,7 +685,7 @@ public class ScrumBoard extends Application {
 	}
 	
 	private void createNewStory(String storyName, int storyPoints, String author){
-		UserStory newStory = new UserStory(storyName, storyPoints, author, "Not Started");
+		UserStory newStory = new UserStory(storyName, storyPoints, author, "Backlog");
 		stringMap.put(storyName, newStory);
 		backlogView.getItems().add(storyName);
 	}
@@ -668,7 +703,44 @@ public class ScrumBoard extends Application {
 		UserStory story = stringMap.get(storyName);
 		story.setStoryPoints(storyPoints);
 		story.setAuthor(author);
-		
 	}
 
+	@Override
+	public void stop() {
+		try{
+			File storiesFile = new File("Stories.ser");
+			if(storiesFile.exists())
+				storiesFile.delete();
+			File listviewsFile = new File("ListViews.ser");
+			if(listviewsFile.exists())
+				listviewsFile.delete();
+			
+			FileOutputStream fos = new FileOutputStream("Stories.ser");
+		    ObjectOutputStream oos = new ObjectOutputStream(fos);
+		    oos.writeObject(stringMap);
+		    oos.close();
+		    fos.close();
+		    
+		    HashMap<String, String[]> mapOfStrings = new HashMap<String, String[]>();
+		    for(String listViewName : listViewMap.keySet()){
+		    	System.out.println("saving "+listViewName);
+		    	String[] tmp = new String[listViewMap.get(listViewName).getItems().size()];
+		    	int i = 0;
+		    	for(String s : listViewMap.get(listViewName).getItems()){
+		    		tmp[i] = s;
+		    		i++;
+		    	}
+		    	mapOfStrings.put(listViewName, tmp);
+		    }
+		    FileOutputStream fos2 = new FileOutputStream("ListViews.ser");
+		    ObjectOutputStream oos2 = new ObjectOutputStream(fos2);
+		    oos2.writeObject(mapOfStrings);
+		    oos2.close();
+		    fos2.close();
+		    
+		    System.out.println("Saved board");
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
 }
