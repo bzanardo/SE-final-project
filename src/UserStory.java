@@ -43,5 +43,11 @@ public class UserStory  implements Serializable {
 		this.author = author;
 	}
 	
+	public void setNull() {
+		this.name = null;
+		this.author = null;
+		this.status = null;
+	}
+	
 
 }

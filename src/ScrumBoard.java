@@ -49,10 +49,12 @@ public class ScrumBoard extends Application {
 	ListView<String> firstView = new ListView<>();
 	ListView<String> secondView = new ListView<>();
 	ListView<String> thirdView = new ListView<>();
+	ListView<String> fourthView = new ListView<>();
 	
 	TextArea textBox = new TextArea();
 	Label textBoxLabel = new Label("");
 	Button editButton = new Button("Edit Story");
+	Button deleteButton = new Button("Delete Story");
 	
 	UserStory selectedStory = new UserStory(null, 0, null, null);		// story selected by user to be edited
 	
@@ -62,6 +64,7 @@ public class ScrumBoard extends Application {
 	static final String DRAGTO = "DRAG_TO";
 	static final String CREATE = "CREATE_STORY";
 	static final String EDIT = "EDIT_STORY";
+	static final String DELETE = "DELETE_STORY";
 	
     BufferedReader in;
     PrintWriter out;
@@ -79,6 +82,7 @@ public class ScrumBoard extends Application {
 		listViewMap.put("firstView", firstView);
 		listViewMap.put("secondView", secondView);
 		listViewMap.put("thirdView", thirdView);
+		listViewMap.put("fourthView", fourthView);
 		loadListViewMap();
 		
 		// initialize status map
@@ -86,13 +90,14 @@ public class ScrumBoard extends Application {
 		statusMap.put(firstView, "Not Started");
 		statusMap.put(secondView, "In Progress");
 		statusMap.put(thirdView, "Testing/Review");
-		
+		statusMap.put(fourthView, "Done");
 		
 		// Labels
 		Label backlogLabel = new Label("BackLog: ");
 		Label firstLabel = new Label("Not Started: ");
 		Label secondLabel = new Label("In Progress: ");
 		Label thirdLabel = new Label("Testing/Review: ");
+		Label fourthLabel = new Label("Done: ");
 		Label scrumLabel = new Label("Current Sprint");
 		
 		// Buttons
@@ -106,8 +111,13 @@ public class ScrumBoard extends Application {
 		secondLabel.setTranslateX(160);
 		secondLabel.setTranslateY(75);
 		thirdLabel.setTranslateX(-20);
-		thirdLabel.setTranslateY(75);	
-		scrumLabel.setTranslateX(275);
+		thirdLabel.setTranslateY(75);
+		
+		fourthLabel.setTranslateX(70);
+		fourthLabel.setTranslateY(75);
+		
+		
+		scrumLabel.setTranslateX(310);
 		scrumLabel.setTranslateY(30);
 		scrumLabel.setStyle("-fx-font: 20 arial;");
 		
@@ -122,7 +132,7 @@ public class ScrumBoard extends Application {
 		textBoxLabel.setStyle("-fx-font: 16 arial;");
 		
 		//Set listviews' postions
-		backlogView.setPrefSize(200, 200);
+		backlogView.setPrefSize(200, 400);
 		backlogView.setTranslateY(75);
 		backlogView.setMaxWidth(200);
 		
@@ -141,11 +151,19 @@ public class ScrumBoard extends Application {
 		thirdView.setTranslateY(75);
 		thirdView.setMaxWidth(200);
 		
+		fourthView.setPrefSize(200, 400);
+		//fourthView.setTranslateX(20);
+		fourthView.setTranslateY(75);
+		fourthView.setMaxWidth(200);
+		
 		// Set buttons' positions
 		addButton.setTranslateX(25);
 		addButton.setTranslateY(520);
 		editButton.setTranslateY(10);
 		editButton.setDisable(true);
+		deleteButton.setTranslateY(40);
+		deleteButton.setDisable(true);
+		
 
 		backlogView.getItems().addAll(this.getUserStoryList());
 
@@ -153,17 +171,19 @@ public class ScrumBoard extends Application {
 		firstView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		secondView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		thirdView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		fourthView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
 		GridPane pane = new GridPane();
 
 		pane.getChildren().add(addButton);
 		pane.add(editButton, 3, 4);
+		pane.add(deleteButton, 3, 4);
 		
-		pane.addRow(1, backlogLabel, firstLabel, secondLabel, thirdLabel);
+		pane.addRow(1, backlogLabel, firstLabel, secondLabel, thirdLabel, fourthLabel);
 		pane.addRow(0, scrumLabel);
 		pane.add(textBoxLabel, 2, 4);
 		
-		pane.addRow(3, backlogView, firstView, secondView, thirdView);
+		pane.addRow(3, backlogView, firstView, secondView, thirdView, fourthView);
 		pane.add(textBox, 2, 4);
 
 		// handlers
@@ -265,6 +285,30 @@ public class ScrumBoard extends Application {
 			}
 		});
 		
+		fourthView.setOnDragDetected(new EventHandler<MouseEvent>() {
+			public void handle(MouseEvent event) {
+				dragDetected(event, fourthView);
+			}
+		});
+
+		fourthView.setOnDragOver(new EventHandler<DragEvent>() {
+			public void handle(DragEvent event) {
+				dragOver(event, fourthView);
+			}
+		});
+
+		fourthView.setOnDragDropped(new EventHandler<DragEvent>() {
+			public void handle(DragEvent event) {
+				dragDropped(event, fourthView);
+			}
+		});
+
+		fourthView.setOnDragDone(new EventHandler<DragEvent>() {
+			public void handle(DragEvent event) {
+				dragDone(event, fourthView);
+			}
+		});
+		
 		backlogView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
 				expandStory(backlogView);
@@ -292,6 +336,14 @@ public class ScrumBoard extends Application {
 		thirdView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
 				expandStory(thirdView);		
+			}
+		});
+		
+		fourthView.setOnMouseClicked(new EventHandler<MouseEvent>() {
+			public void handle(MouseEvent event) {
+				expandStory(fourthView);
+				
+				
 			}
 		});
 		
@@ -405,18 +457,37 @@ public class ScrumBoard extends Application {
  						});
  						out.println(EDIT+","+tf1.getText()+","+tf2.getText()+","+tf3.getText());
  						newWindow.close();
- 						//updateStory(selectedStory.getName());
  						textBox.clear();
  					}
  				});
             } 
-        }; 
+        };
+        
+        EventHandler<ActionEvent> deleteStoryEvent = new EventHandler<ActionEvent>() { 
+            public void handle(ActionEvent e) 
+            {
+            	ListView<String> listView = getListView(selectedStory.getStatus());
+            	
+            	Platform.runLater(new Runnable() {
+						@Override
+						public void run() {
+							deleteStory(selectedStory.getName(), listView);
+						}
+
+				});
+            	
+            	out.println(DELETE+","+selectedStory.getName()+","+getListViewName(listView));
+            	
+            }
+            
+        };
         
         addButton.setOnAction(createStoryEvent);
         editButton.setOnAction(editStoryEvent);
+        deleteButton.setOnAction(deleteStoryEvent);
 
 		Pane root = new Pane();
-		root.setPrefSize(1000, 750);
+		root.setPrefSize(1200, 750);
 		root.getChildren().addAll(pane);
 		
 		mainScene = new Scene(root);
@@ -548,6 +619,16 @@ public class ScrumBoard extends Application {
     					}
     				});
             	}
+            	
+            	else if(commands[0].equals(DELETE)){
+            		String storyName = commands[1];
+            		Platform.runLater(new Runnable() {	// run on JavaFX main thread
+    					@Override
+    					public void run() {
+    						deleteStory(storyName, listViewMap.get(commands[2]));
+    					}
+    				});
+            	}
             }
         }
     }
@@ -575,6 +656,8 @@ public class ScrumBoard extends Application {
 		
 		else {
 			editButton.setDisable(false);
+			deleteButton.setDisable(false);
+			
 			UserStory story = stringMap.get(name);
 			selectedStory = story;
 			textBoxLabel.setText(name);
@@ -583,16 +666,6 @@ public class ScrumBoard extends Application {
 							+ story.getStatus());
 		}
 			
-	}
-	
-	private void updateStory(String name) {
-		UserStory story = stringMap.get(name);
-		textBox.clear();
-		textBoxLabel.setText(story.getName());
-		textBox.appendText(" Author: " + story.getAuthor() + 
-						"\n Story Points: " + story.getStoryPoints() + "\n Status: " 
-						+ story.getStatus());
-		
 	}
 
 	private void dragDetected(MouseEvent event, ListView<String> listView) {
@@ -697,12 +770,38 @@ public class ScrumBoard extends Application {
 	
 	private void addStoryFromServer(String storyName, ListView<String> listView){
 		listView.getItems().add(storyName);
+		UserStory story = stringMap.get(storyName);
+		story.setStatus(statusMap.get(listView)); 
+		
 	}
 	
 	private void editStory(String storyName, Integer storyPoints, String author) {
 		UserStory story = stringMap.get(storyName);
 		story.setStoryPoints(storyPoints);
 		story.setAuthor(author);
+	}
+	
+	private void deleteStory(String storyName,  ListView<String> listView) { 	
+		listView.getItems().remove(storyName);
+    	stringMap.remove(storyName);
+    	textBox.clear();
+    	textBoxLabel.setText("");
+    	
+    	selectedStory.setNull();
+    	
+	}
+	
+	private ListView<String> getListView(String storyStatus) {
+		ListView<String> listView = new ListView<String>();
+		
+		for (HashMap.Entry<ListView<String>, String> entry : statusMap.entrySet()) {
+    		if (entry.getValue() == storyStatus) {
+    			listView = entry.getKey();
+    			
+    		}
+    	}
+		
+		return listView;
 	}
 
 	@Override
