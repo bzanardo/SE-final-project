@@ -1,5 +1,4 @@
 import java.io.Serializable;
-import java.util.ArrayList;
 
 public class UserStory  implements Serializable {
 
@@ -42,6 +41,12 @@ public class UserStory  implements Serializable {
 	
 	public void setAuthor(String author) {
 		this.author = author;
+	}
+	
+	public void setNull() {
+		this.name = null;
+		this.author = null;
+		this.status = null;
 	}
 	
 
