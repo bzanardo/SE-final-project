@@ -434,8 +434,13 @@ public class ScrumBoard extends Application {
             	 form.add(author, 0, 2);
             	 form.add(tf3, 1, 2);
             	 
+            	 Label comment = new Label("Add New Comment:");
+            	 TextField tf4 = new TextField();
+            	 form.add(comment, 0, 3);
+            	 form.add(tf4, 1, 3);
+            	 
             	 Button saveStory = new Button("Save");
-            	 form.add(saveStory, 0, 3);
+            	 form.add(saveStory, 0, 4);
             
                  Scene secondScene = new Scene(form, 500, 500);
               
@@ -456,11 +461,11 @@ public class ScrumBoard extends Application {
  						Platform.runLater(new Runnable() {
  							@Override
  							public void run() {
- 								editStory(selectedStory.getName(), Integer.valueOf(tf2.getText()), tf3.getText());
+ 								editStory(selectedStory.getName(), Integer.valueOf(tf2.getText()), tf3.getText(), tf4.getText());
  							}
 
  						});
- 						out.println(EDIT+","+tf1.getText()+","+tf2.getText()+","+tf3.getText());
+ 						out.println(EDIT+","+tf1.getText()+","+tf2.getText()+","+tf3.getText()+tf4.getText());
  						newWindow.close();
  						textBox.clear();
  					}
@@ -707,7 +712,7 @@ public class ScrumBoard extends Application {
             		Platform.runLater(new Runnable() {	// run on JavaFX main thread
     					@Override
     					public void run() {
-    						editStory(storyName, Integer.valueOf(commands[2]), commands[3]);
+    						editStory(storyName, Integer.valueOf(commands[2]), commands[3], commands[4]);
     					}
     				});
             	}
@@ -766,7 +771,7 @@ public class ScrumBoard extends Application {
 			textBoxLabel.setText(name);
 			textBox.appendText(" Author: " + story.getAuthor() + 
 							"\n Story Points: " + story.getStoryPoints() + "\n Status: " 
-							+ story.getStatus());
+							+ story.getStatus() + "\n Comments: " + story.getComments());
 		}
 			
 	}
@@ -944,10 +949,11 @@ public class ScrumBoard extends Application {
 		story.setStatus(statusMap.get(listView)); 
 	}
 	
-	private void editStory(String storyName, Integer storyPoints, String author) {
+	private void editStory(String storyName, Integer storyPoints, String author, String comments) {
 		UserStory story = stringMap.get(storyName);
 		story.setStoryPoints(storyPoints);
 		story.setAuthor(author);
+		story.setComments(comments);
 	}
 	
 	private void deleteStory(String storyName,  ListView<String> listView) { 	
