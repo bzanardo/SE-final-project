@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -11,6 +12,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -21,7 +23,11 @@ import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
@@ -36,6 +42,7 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
+import javafx.util.Pair;
 
 public class ScrumBoard extends Application {
 	
@@ -44,6 +51,7 @@ public class ScrumBoard extends Application {
 	static HashMap<String, UserStory> stringMap = new HashMap<>();
 	static HashMap<String, ListView<String>> listViewMap = new HashMap<>();
 	HashMap<ListView<String>, String> statusMap = new HashMap<>();
+	static HashMap<String, String> doneStories = new HashMap<>();
 
 	ListView<String> backlogView = new ListView<>();
 	ListView<String> firstView = new ListView<>();
@@ -65,6 +73,7 @@ public class ScrumBoard extends Application {
 	static final String CREATE = "CREATE_STORY";
 	static final String EDIT = "EDIT_STORY";
 	static final String DELETE = "DELETE_STORY";
+	static final String SET_STORY_DONE = "SET_DONE";
 	
     BufferedReader in;
     PrintWriter out;
@@ -76,6 +85,7 @@ public class ScrumBoard extends Application {
 	@Override
 	public void start(Stage stage) throws Exception {
 		stringMap = initializeMap();
+		doneStories = initializeDoneStoriesMap();
 		
 		// initialize listview map
 		listViewMap.put("backlogView", backlogView);
@@ -102,6 +112,7 @@ public class ScrumBoard extends Application {
 		
 		// Buttons
 		Button addButton = new Button("Add New User Story");
+		Button burndownChartBtn = new Button("Burndown Chart");
 		
 		// Set labels' positions
 		backlogLabel.setTranslateX(70);
@@ -159,13 +170,14 @@ public class ScrumBoard extends Application {
 		// Set buttons' positions
 		addButton.setTranslateX(25);
 		addButton.setTranslateY(520);
+		burndownChartBtn.setTranslateX(25);
+		burndownChartBtn.setTranslateY(580);
 		editButton.setTranslateY(10);
 		editButton.setDisable(true);
 		deleteButton.setTranslateY(40);
 		deleteButton.setDisable(true);
 		
-
-		backlogView.getItems().addAll(this.getUserStoryList());
+		//backlogView.getItems().addAll(this.getUserStoryList());
 
 		backlogView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		firstView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
@@ -176,6 +188,7 @@ public class ScrumBoard extends Application {
 		GridPane pane = new GridPane();
 
 		pane.getChildren().add(addButton);
+		pane.getChildren().add(burndownChartBtn);
 		pane.add(editButton, 3, 4);
 		pane.add(deleteButton, 3, 4);
 		
@@ -312,24 +325,18 @@ public class ScrumBoard extends Application {
 		backlogView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
 				expandStory(backlogView);
-				
-				
 			}
 		});
 		
 		firstView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
 				expandStory(firstView);
-				
-				
 			}
 		});
 		
 		secondView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
 				expandStory(secondView);
-				
-				
 			}
 		});
 		
@@ -342,8 +349,6 @@ public class ScrumBoard extends Application {
 		fourthView.setOnMouseClicked(new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
 				expandStory(fourthView);
-				
-				
 			}
 		});
 		
@@ -466,23 +471,92 @@ public class ScrumBoard extends Application {
         EventHandler<ActionEvent> deleteStoryEvent = new EventHandler<ActionEvent>() { 
             public void handle(ActionEvent e) 
             {
-            	ListView<String> listView = getListView(selectedStory.getStatus());
-            	
+            	ListView<String> listView = getListViewFromStatus(selectedStory.getStatus());
             	Platform.runLater(new Runnable() {
 						@Override
 						public void run() {
+							System.out.println("delete story "+selectedStory.getName()+" from "+getListViewName(listView));
 							deleteStory(selectedStory.getName(), listView);
 						}
-
 				});
-            	
             	out.println(DELETE+","+selectedStory.getName()+","+getListViewName(listView));
-            	
             }
+        };
+        
+        EventHandler<ActionEvent> burndownChartEvent = new EventHandler<ActionEvent>() { 
+            public void handle(ActionEvent e) 
+            { 
+            	 final NumberAxis xAxis = new NumberAxis();
+            	 xAxis.setLabel("Day in December (10-day sprint in December)");
+            	 final NumberAxis yAxis = new NumberAxis();
+            	 yAxis.setLabel("Number of tasks left");
+            	 yAxis.setScaleY(1);
+            	 final LineChart<Number, Number> chart = new LineChart<Number, Number>(xAxis, yAxis);
+            	 chart.setTitle("Burndown Chart");
+            	 
+            	 XYChart.Series<Number, Number> fixed = new XYChart.Series<Number, Number>();
+            	 fixed.setName("Optimal Task Distribution");
+            	 XYChart.Series<Number, Number> actual = new XYChart.Series<Number, Number>();
+            	 actual.setName("Actual Task Distribution");
+            	 
+            	 HashMap<Integer, Integer> tasksLeftOnDay = new HashMap<>();
+            	 
+            	 int numTasks = doneStories.size();
+            	 for(int i=0; i<numTasks; i++){
+            		 @SuppressWarnings("unchecked")
+            		 Map.Entry<String, String> entry = (Map.Entry<String, String>)doneStories.entrySet().toArray()[i];
+            		 String dateString = entry.getValue();
+            		 int day = Integer.valueOf(dateString.split("/")[1]);
+            		 if(!tasksLeftOnDay.containsKey(day)){
+            			 tasksLeftOnDay.put(day, numTasks);
+            		 }
+            		 tasksLeftOnDay.put(day, tasksLeftOnDay.get(day)-1);
+            		 
+            		 if(numTasks <= 10){
+            			 fixed.getData().add(new XYChart.Data<Number, Number>(i, numTasks-i));
+            		 }
+            	 }
+            	 if(numTasks <= 10){
+            		 for(int i=numTasks; i<10; i++){
+            			 fixed.getData().add(new XYChart.Data<Number, Number>(i, 0));
+            		 }
+        		 }else{
+        			 int tasksPerDay = (int) Math.ceil((double)numTasks/10.0);
+        			 for(int i=0; i<10; i++){
+            			 fixed.getData().add(new XYChart.Data<Number, Number>(i+1, Math.max(0,tasksPerDay*i)));
+        			 }
+        		 }
+            	 
+            	 actual.getData().add(new XYChart.Data<Number, Number>(0, numTasks));
+            	 for(Map.Entry<Integer, Integer> entry : tasksLeftOnDay.entrySet()){
+            		 for(int i=entry.getKey()-1; i>=0; i--){
+	            		 if(tasksLeftOnDay.containsKey(i)){
+	            			 tasksLeftOnDay.put(entry.getKey(), tasksLeftOnDay.get(i) - (numTasks-entry.getValue()));
+	            			 break;
+	            		 }
+            		 }
+            		 actual.getData().add(new XYChart.Data<Number, Number>(entry.getKey(), entry.getValue()));
+            	 }
             
+                 Scene secondScene = new Scene(chart, 500, 500);
+                 chart.getData().add(fixed);
+                 chart.getData().add(actual);
+              
+                 // New window (Stage)
+                 Stage newWindow = new Stage();
+                 newWindow.setTitle("Add New User Story");
+                 newWindow.setScene(secondScene);
+  
+                 // Set position of second window, related to primary window.
+                 newWindow.setX(stage.getX() + 200);
+                 newWindow.setY(stage.getY() + 100);
+  
+                 newWindow.show();
+            } 
         };
         
         addButton.setOnAction(createStoryEvent);
+        burndownChartBtn.setOnAction(burndownChartEvent);
         editButton.setOnAction(editStoryEvent);
         deleteButton.setOnAction(deleteStoryEvent);
 
@@ -517,6 +591,8 @@ public class ScrumBoard extends Application {
 	         map = (HashMap<String, UserStory>) ois.readObject();
 	         ois.close();
 	         fis.close();
+		}catch(FileNotFoundException e){
+			System.out.println("No User Story file saved");
 		}catch(Exception e){
 	       e.printStackTrace();
 	    }
@@ -533,25 +609,41 @@ public class ScrumBoard extends Application {
 	}
 	
 	@SuppressWarnings("unchecked")
+	private HashMap<String, String> initializeDoneStoriesMap() {
+		HashMap<String, String> map = new HashMap<String, String>();
+		try {
+	         FileInputStream fis = new FileInputStream("DoneStories.ser");
+	         ObjectInputStream ois = new ObjectInputStream(fis);
+	         map = (HashMap<String, String>) ois.readObject();
+	         ois.close();
+	         fis.close();
+		}catch(FileNotFoundException e){
+			System.out.println("No Done Stories file saved");
+		}catch(Exception e){
+	       e.printStackTrace();
+	    }
+		
+		return map;
+	}
+	
+	@SuppressWarnings("unchecked")
 	private void loadListViewMap(){
-		HashMap<String, ListView<String>> map = new HashMap<String, ListView<String>>();
 		try{
 			FileInputStream fis = new FileInputStream("ListViews.ser");
 	        ObjectInputStream ois = new ObjectInputStream(fis);
 	        HashMap<String, String[]> obj = (HashMap<String, String[]>)ois.readObject();
 	        for(String listViewName : obj.keySet()){
-	        	listViewMap.get(listViewName).getItems().clear();
 	        	for(String storyName : obj.get(listViewName)){
 	        		listViewMap.get(listViewName).getItems().add(storyName);
 	        	}
 	        }
 	        ois.close();
 	        fis.close();
+		}catch(FileNotFoundException e){
+			System.out.println("No ListView file saved");
 		}catch(Exception e){
 	         e.printStackTrace();
 	    }
-		
-		//return map;
 	}
 
 	private void runClient(Thread t) throws IOException {
@@ -629,6 +721,17 @@ public class ScrumBoard extends Application {
     					}
     				});
             	}
+            	
+            	else if(commands[0].equals(SET_STORY_DONE)){
+            		String storyName = commands[1];
+            		Platform.runLater(new Runnable() {	// run on JavaFX main thread
+    					@Override
+    					public void run() {
+    						addStoryFromServer(storyName, fourthView);
+    						setStoryDone(storyName, commands[2]);
+    					}
+    				});
+            	}
             }
         }
     }
@@ -697,6 +800,68 @@ public class ScrumBoard extends Application {
 
 		event.consume();
 	}
+	
+	private void setStoryDone(String storyName, String date){
+		doneStories.put(storyName, date);
+	}
+	
+	private void askForDateDone(String storyName){
+		GridPane form = new GridPane();
+   	 	form.setAlignment(Pos.TOP_LEFT);
+   	 	form.setHgap(10);
+   	 	form.setVgap(10);
+   	 	form.setPadding(new Insets(25, 25, 25, 25));
+   	 	
+   	 	ObservableList<String> dates = 
+   		    FXCollections.observableArrayList(
+   		        "12/01",
+   		        "12/02",
+   		        "12/03",
+   		        "12/04",
+   		        "12/05",
+   		        "12/06",
+   		        "12/07",
+   		        "12/08",
+   		        "12/09",
+   		        "12/10"
+   		    );
+   	 
+   	 	Label dateLabel = new Label("Date task was completed:");
+   	 	final ComboBox<String> dropdown = new ComboBox<String>(dates); 
+   	 	form.add(dateLabel, 0, 0);
+   	 	form.add(dropdown, 1, 0);
+   	 
+	   	Button doneBtn = new Button("Done");
+	   	form.add(doneBtn, 0, 3);
+   
+		Scene secondScene = new Scene(form, 500, 500);
+		 
+		Stage newWindow = new Stage();
+		newWindow.setTitle("Chose date task "+storyName+" was completed");
+		newWindow.setScene(secondScene);
+		
+		// Set position of second window, related to primary window.
+		//newWindow.setX(stage.getX() + 200);
+		//newWindow.setY(stage.getY() + 100);
+		
+		newWindow.show();
+		
+		doneBtn.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				Platform.runLater(new Runnable() {
+					@Override
+					public void run() {
+						setStoryDone(storyName, dropdown.getSelectionModel().getSelectedItem());
+					}
+		
+				});
+				out.println(SET_STORY_DONE+","+storyName+","+dropdown.getSelectionModel().getSelectedItem());
+				newWindow.close();
+			}
+		});
+	}
+	
 
 	@SuppressWarnings("unchecked")
 	private void dragDropped(DragEvent event, ListView<String> listView) {
@@ -712,7 +877,12 @@ public class ScrumBoard extends Application {
 			listView.getItems().addAll(list);
 			dragCompleted = true;
 			
-			out.println(DRAGTO+","+list.get(0)+","+getListViewName(listView));
+			
+			if(listView.equals(fourthView)){
+				askForDateDone(list.get(0)); // this calls out.println(SET_STORY_DONE...
+			}else{
+				out.println(DRAGTO+","+list.get(0)+","+getListViewName(listView));
+			}
 		}
 		
 		event.setDropCompleted(dragCompleted);
@@ -772,7 +942,6 @@ public class ScrumBoard extends Application {
 		listView.getItems().add(storyName);
 		UserStory story = stringMap.get(storyName);
 		story.setStatus(statusMap.get(listView)); 
-		
 	}
 	
 	private void editStory(String storyName, Integer storyPoints, String author) {
@@ -786,24 +955,20 @@ public class ScrumBoard extends Application {
     	stringMap.remove(storyName);
     	textBox.clear();
     	textBoxLabel.setText("");
-    	
     	selectedStory.setNull();
-    	
 	}
 	
-	private ListView<String> getListView(String storyStatus) {
-		ListView<String> listView = new ListView<String>();
-		
+	private ListView<String> getListViewFromStatus(String storyStatus) {
 		for (HashMap.Entry<ListView<String>, String> entry : statusMap.entrySet()) {
-    		if (entry.getValue() == storyStatus) {
-    			listView = entry.getKey();
-    			
+    		if (entry.getValue().equals(storyStatus)) {
+    			return entry.getKey();
     		}
     	}
 		
-		return listView;
+		return null;
 	}
 
+	// Override stop method (when window is closed) to persist board
 	@Override
 	public void stop() {
 		try{
@@ -813,6 +978,9 @@ public class ScrumBoard extends Application {
 			File listviewsFile = new File("ListViews.ser");
 			if(listviewsFile.exists())
 				listviewsFile.delete();
+			File doneStoriesFile = new File("DoneStories.ser");
+			if(doneStoriesFile.exists())
+				doneStoriesFile.delete();
 			
 			FileOutputStream fos = new FileOutputStream("Stories.ser");
 		    ObjectOutputStream oos = new ObjectOutputStream(fos);
@@ -822,7 +990,6 @@ public class ScrumBoard extends Application {
 		    
 		    HashMap<String, String[]> mapOfStrings = new HashMap<String, String[]>();
 		    for(String listViewName : listViewMap.keySet()){
-		    	System.out.println("saving "+listViewName);
 		    	String[] tmp = new String[listViewMap.get(listViewName).getItems().size()];
 		    	int i = 0;
 		    	for(String s : listViewMap.get(listViewName).getItems()){
@@ -837,7 +1004,13 @@ public class ScrumBoard extends Application {
 		    oos2.close();
 		    fos2.close();
 		    
-		    System.out.println("Saved board");
+		    FileOutputStream fos3 = new FileOutputStream("DoneStories.ser");
+		    ObjectOutputStream oos3 = new ObjectOutputStream(fos3);
+		    oos3.writeObject(doneStories);
+		    oos3.close();
+		    fos3.close();
+		    
+		    System.out.println("Board saved");
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
